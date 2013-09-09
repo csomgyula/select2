@@ -4,16 +4,9 @@
 Protocol
 -------------------------------------------------------------------------------
 
-    # #########################################################################
-    # start
-    # #########################################################################
-
     # mark this thread as active
     active[i] = true
 
-    # #########################################################################
-    # guard
-    # #########################################################################
     # check whether the other thread is active
     if active[i + 1]:
 
@@ -24,18 +17,13 @@ Protocol
         while active[i + 1] and wait[i]:
             # if this is waker either wake up the other thread or acknowledge waker change
             if waker == i:
-                # if waker change is not in progress wakeup other thread
+                # if waker change is not in progress mark other thread to not wait
                 if not waker_change: wait[i + 1] = false
                     
                 # otherwise acknowledge it
                 else: waker_change = false
 
             yield
-
-    
-    # #########################################################################
-    # finish
-    # #########################################################################
 
     # mark this selected 
     selected[i] = true
@@ -48,24 +36,20 @@ Protocol
        # change waker to this thread
        waker = i
 
-       # acknowledge other thread about change
+       # tell other thread the change
        if active[i + 1]:
-           # acknowledge
+           # yield the change
            waker_change = true
 
-           # wait until other thread is either deactivated or acknowledges 
+           # wait until other thread acknowledges 
            while waker_change: yield
-
-           # for the case when the other thread became inactive
-           waker_change = false
 
     # mark this inactive
     active[i] = false
 
-The evolution of the protocol
--------------------------------------------------------------------------------
+Lets go through the protocol "building it up starting from ground":
 
-### The simplest ###
+### The simplest protocol ###
 
 The simplest, though unsafe protocol is the following:
 
@@ -77,7 +61,7 @@ The simplest, though unsafe protocol is the following:
 
 Thi is obviously wait-free but not safe.
 
-### The safe ###
+### The safe one ###
 
 The problem with the simplest protocol is that it does not guard against the case when the two threads enter the protocol and hence are selected in parallel. So **lets add a guard before selection which checks whether the other thread is active or not**:
 
@@ -111,7 +95,7 @@ Assume that thread 0 did not detect thread 1 as active. This means that when  th
 
 *Note that we must also assume that thread 0 is still active when thread 1 issues its guard, otherwise it may find thread 0 as inactive.*
 
-### The safe and almost wait-free ###
+### The safe and almost wait-free one ###
 
 The problem with the above safe protocol is the case when both thread executes its guard at the same time. (At least to me) this seems to be a problem with symmetry: the system cannot really differentiate between the two threads when staying in the wait loop. So **lets break the symmetry: give thread 0 a special role, the 'waker', whose only task is to wake up thread 0**:
 
@@ -147,9 +131,9 @@ The problem with this protocol is that it is not wait-free, only almost wait-fre
 
 It could happen that thread 0 is unable to detect thread 1's idle period, hence it will see thread 1 as always being active and stay in the wait loop forever. 
 
-### The safe and wait-free ###
+### The final one ###
 
-It looks like that by breaking the symmetry we became unfair to thread 0. So lets rebuild the symmetry in a dynamic way. We make the waker role dynamic: different thread will play the role in different rounds. An initial protocol might look like this:
+It looks like that by breaking the symmetry we became unfair to thread 0. So lets rebuild the symmetry in a dynamic way and make the waker role dynamic: **different threads will play the 'waker' role in different rounds**. An initial protocol might look like this:
 
     # mark this thread as active
     active[i] = true
@@ -179,19 +163,29 @@ It looks like that by breaking the symmetry we became unfair to thread 0. So let
     # mark this inactive
     active[i] = false
 
-This is almost good. The only problem is that the role change is not safe. Think of the following scenario:
+This is almost good. The only problem is that the role change is not yet safe. Think of the following scenario:
 
 1. Originally thread 0 plays the waker role and it is in the wait loop just before issuing another wakeup, that is: it already issued `if waker == 0` but not yet executed `wait[1] = false`
-1. Thread 1 changes the role and becomes the waker, then it 'becomes very busy': before thread 0 could execute its next statement (`wait[1] = false`): 
-1. thread 1 reenters the protocol
+1. Thread 1 changes the role and becomes the waker, then it 'starts executing statements very busily': before thread 0 would ever execute its next statement (`wait[1] = false`) thread 1 
+1. reenters the protocol
 1. detects that thread 0 is active hence 
-1. enter the wait loop as well - and this is a problem since now there are two 'wakers' in the wait loop: there's thread 1 the real waker and thread 0 the fake waker, who mistakenly thinks that it is the waker - that is:
-1.  thread 1 might `yield`, then
-1.  thread 0 executes `wait[1] = false` which marks thread 1 to not wait, then 
-1.  thread 0 might `yield` and
-1.  thread 1 execute `wait[0] = false` which marks thread 0 to not wait
+1. enters the wait loop as well - and this is a problem since now there are two 'wakers' in the wait loop: there's thread 1 the real waker and thread 0 the fake waker, who mistakenly thinks that it is the waker - that is:
+1.  thread 1 executes `wait[0] = false` which marks thread 0 to not wait, now it might slow down and let thread 0 to work, that is:
+1.  thread 0 executes `wait[1] = false` which marks thread 1 to not wait
+ 
+Now both thread is marked to not wait, hence might leave the wait loop in parallel and hence selected in parallel.
 
-Hence both thread might leave the wait loop in parallel and hence selected in parallel.
+Formally a history could look like this:
+
+    thread 0: if waker == 0   # which yields true at this time
+    thread 1: if not waker == 1: waker = 1
+    thread 1: active[1] = false
+    thread 1: active[1] = true
+    thread 1: if active[0]
+    thread 1: wait[1] = true
+    thread 1: while active[0] and wait[1] # now both thread is in the wait loop as a waker 
+    thread 1: wait[0] = false # marks thread 0 to not wait 
+    thread 0: wait[1] = false # marks thread 1 to not wait
 
 In order to make the role change safe, the protocol adds a synchronization between the two threads: 
 
@@ -202,53 +196,173 @@ In order to make the role change safe, the protocol adds a synchronization betwe
 
 -- if the previous waker is active, then the changer tells it that a role change is in progress, technically it sets the corresponding flag to true:
 
-     # acknowledge other thread about change
+     # tell other thread the change
      if active[i + 1]:
 
-         # acknowledge
+         # yield change
          waker_change = true
 
 -- then the new waker goes into a wait loop until the previous one acknowledges the change:
 
          # wait until other thread acknowledges 
-         while active[i + 1] and waker_change: yield
+         while waker_change: yield
 
 *acknowledging role change*
 
 -- when the previous waker (staying in the guard) detects the role change, acknowledges it, hence breaks the other thread's wait loop:
 
-    # if waker change is not in progress wakeup other thread
+    # if waker change is not in progress mark other thread to not wait
     if not waker_change: wait[i + 1] = false
                     
     # otherwise acknowledge it
     else: waker_change = false
 
-That's all.
+That's all:-)
+
 
 Properties
 -------------------------------------------------------------------------------
 
+The above chapter described the protocol in details, now we try to prove its features that is to say: the protocol is safe and wait-free. The proof will go like this:
+
+1. create a formal model of the protocol
+1. prove some internal properties thorough a series of lemmas wich will be helpful in the proof
+1. finally prove the features 
+
+
+### A formal model ###
+
+For reasoning I use [`I/O automaton`](http://en.wikipedia.org/wiki/I/O_automaton):
+
+#### States ####
+
+States are the ones those are in the pseudo code, ie.:
+
+* `active[i]` - marks whether thread i is selected
+* `wait[i]` - marks whether thread i is to wait
+* `waker` - shows which thread is the waker
+* `waker_change` - marks whether there is a waker change in progress
+* `selected[i]` - marks whether thread i is selected
+
+#### Events ####
+
+For better readibility I define the `sync2` [`I/O automaton`](http://en.wikipedia.org/wiki/I/O_automaton) through the original pseudo code:
+
+    # mark this thread active
+    input event activate(i) = 
+    active[i] = true
+
+    # check whether other thread is active
+    internal event is_other_active(i, i+1) = 
+    if active[i + 1]:
+
+        # mark this thread to wait
+        internal event set_wait(i) = 
+        wait[i] = true
+
+        # a small rewrite, moved the condition within the loop:
+        while true: 
+
+            # evaluates wait condition and breaks if it is not true
+            internal event wait_condition(i) =
+            if not (active[i + 1] and wait[i]): break
+
+            # evaluate whether this is waker
+            internal event is_waker(i) =
+            if waker == i:
+
+            internal event is_not_waker_change(i) =
+            if not waker_change:
+ 
+                # if change is not in progress
+                case true:
+
+                    # mark other thread to not wait
+                    internal event unset_wait(i, i+1) = 
+                    wait[i + 1] = false
+                        
+                # if change is in progress
+                case false:
+
+                    # acknowledge waker change
+                    internal event ack_waker_change(i) =
+                    waker_change = false
+
+            yield
+
+    # mark this selected 
+    output event select(i) =
+    selected[i] = true
+
+    # mark this deselected
+    output event unselect(i) =
+    selected[i] = false
+
+    # check whether this is not the waker
+    internal event is_not_waker(i) =
+    if not waker == i:
+
+       # change waker to this thread
+       internal event set_waker(i)
+       waker = i
+
+       # check whether other thread is active
+       internal event is_other_active_in_change(i) =
+       if active[i + 1]:
+
+           # tell other thread the change
+           internal event yield_waker_change(i)
+           waker_change = true
+
+           # wait until other thread acknowledges
+           internal event is_waker_change_acked(i) 
+           while waker_change: yield
+
+    # mark this inactive
+    output event deactivate(i) =
+    active[i] = false
+
+#### Assumption ####
+
+The proof builds upon the assumption that state read-write (ie. setting and getting `active`, `wait` etc.) provide [`linearizibility`](http://en.wikipedia.org/wiki/Linearizability), that is:
+
+**Assumption: If a write operation finishes before a read invocation, then the read operation must yield the previously set value.** Formally:
+
+if a write operation initiated by thread i finishes before the read operation initiated by (possibly another) thread j:
+
+    invoke_set(i, v) < return_set(i) < invoke_get(j) < return_get(j, w)
+
+then the read operation must yield the previously set value:
+
+    v = w
+
+Note that obviously we assume that there was no other write operation between them.
+
 ### Internal properties ###
 
-#### enter guard ####
+**Lemma 1: If they run in parallel, then one of the threads detects the other as active, hence enters the wait loop in the guard**. Formally:
 
-1. **either thread enters**
- 
-#### exit guard ####
+**Lemma 2: Exiting criterias of the guard's wait loop**:
 
-1. **how exits?** other thread is either deactivated or this is waken up by setting wait[i] to false
-1. **waker and wake up by setting wait[i] to false**
-   1. only the other thread can set this wait flag to false
-   1. wakeup can only happen in the guard
-   1. only the waker thread can wakeup
-   1. the waker role is exclusive
-   1. if a thread was not the waker when entered the guard then it becomes the waker just before deactivating
-   1. if a thread exits the guard when the other thread is still active, then this thread was not the waker and left the other thread in the guard as a waker
+1. A thread might leave the guard's wait loop 
+   1. if the other thread is/becomes inactive or 
+   2. if the thread is marked to not wait
+1. A thread can be marked to not wait
+   1. only by the other thread
+   1. only when the other thread is in the wait loop
+   1. only if the other thread is the waker
 
-#### general ####
+**Lemma 3: Waker role properties**:
 
-1. if a thread exits or avoids the guard **it did not wake the other thread up**
-1. if this thread was still active when the other thread deactivated then either (1) this thread will deactivate before the other reenters or **(2) the other thread enters the guard**
+1. the waker role is exclusive
+1. if a thread was not the waker when entered the guard then it becomes the waker just before deactivating
+1. if a thread exits the guard when the other thread is still active, then 
+   1. the exiting thread is not the waker and 
+   1. the other thread is still in the guard as a waker
+
+**Lemma 4: If a thread exits or avoids the guard then it has not waken the other thread up**
+
+**Lemma 5: If this thread was still active when the other thread deactivated then either (1) this thread will deactivate before the other reenters or (2) the other thread enters the guard**
 
 ### Wait-free ###
 
