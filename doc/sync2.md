@@ -253,7 +253,7 @@ States are the ones those are in the pseudo code, ie.:
 
 #### Events ####
 
-For better readibility I define the `sync2` [`I/O automaton`](http://en.wikipedia.org/wiki/I/O_automaton) through the original pseudo code:
+For better readibility I define the `sync2` events (with their behaviours) through the original pseudo code:
 
     # mark this thread active
     input event activate(i) = 
@@ -332,17 +332,24 @@ For better readibility I define the `sync2` [`I/O automaton`](http://en.wikipedi
 
 ### Assumption ###
 
-The proof builds upon the assumption that the read-write of any state provide [`linearizibility`](http://en.wikipedia.org/wiki/Linearizability) is (ie. setting and getting `active`, `wait` etc. is consistent):
+The proof builds upon the assumption that the read-write operations of any state provide [`linearizibility`](http://en.wikipedia.org/wiki/Linearizability) (ie. setting and getting `active`, `wait` etc. is consistent):
 
-**Assumption: If a write operation setting a new value finishes before a read invocation, then the read operation must yield the this new value.** Formally:
+**Assumption: If a write operation setting a state to a new value finishes before a read invocation, then the read operation must yield the this new value.** Formally:
 
 if a write operation setting a new value (`v`) initiated by thread i finishes before the read operation initiated by (possibly another) thread j:
 
-    invoke_set(i, v) < return_set(i) < invoke_get(j) < return_get(j, w)
+    invoke_set(i, state, v) < return_set(i, state) < invoke_get(j, state) < return_get(j, state, w)
 
 then the read operation must yield the previously set value:
 
     v = w
+
+Here I used the following formalism:
+
+* `invoke_set(i, state, v)` means that thread `i` invokes a write operation on the given `state` indicating to set it to `v`
+* `return_set(i, state)` means that the previous write operation finished
+* `invoke_get(j, state)` means that thread `j` invokes a read operation on the given `state`
+* `return_get(j, state, w)` means that the previous read operation finished and returned `w`
 
 Note that obviously we assume that there was no other write operation between them.
 
