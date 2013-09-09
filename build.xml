@@ -14,7 +14,7 @@
          author="true"
          version="true"
          use="true"
-         windowtitle="Multithreading playground"
+         windowtitle="select2 synchronization primitive"
          Encoding="utf-8"
          docencoding="utf-8"
          Locale="hu_HU"
@@ -54,7 +54,7 @@
 
 	<!-- java -->
 	
-    <target name="java-dist" depends="java-build, java-jar"/>
+    <target name="java-dist" depends="java-jar"/>
 	
     <target name="java-jar" depends="java-build">
 		<antcall target="jar">
@@ -69,7 +69,7 @@
 
 	<!-- scala -->
 	
-    <target name="scala-dist" depends="scala-build, scala-jar"/>
+    <target name="scala-dist" depends="scala-jar"/>
 	
     <target name="scala-jar" depends="scala-build">
 		<antcall target="jar">

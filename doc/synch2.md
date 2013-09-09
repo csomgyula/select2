@@ -81,9 +81,8 @@ Properties
    1. wakeup can only happen in the guard
    1. only the waker thread can wakeup
    1. the waker role is exclusive
-   1. if a thread was not the waker when entered, it becomes just before deactivating
-   1. if a thread exits the guard it was not the waker at that time
-   1. if a thread exits the guard either (1) the other thread was inactive or (2) lefts in the guard as waker
+   1. if a thread was not the waker when entered the guard then it becomes the waker just before deactivating
+   1. if a thread exits the guard when the other thread is still active, then this thread was not the waker and left the other thread in the guard as a waker
 
 #### general ####
 
