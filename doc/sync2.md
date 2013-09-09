@@ -1,4 +1,4 @@
-`synch2` synchronization primitive
+`sync2` synchronization primitive
 ===============================================================================
 
 Protocol
@@ -322,9 +322,9 @@ For better readibility I define the `sync2` [`I/O automaton`](http://en.wikipedi
     output event deactivate(i) =
     active[i] = false
 
-#### Assumption ####
+### Assumption ###
 
-The proof builds upon the assumption that state read-write (ie. setting and getting `active`, `wait` etc.) provide [`linearizibility`](http://en.wikipedia.org/wiki/Linearizability), that is:
+The proof builds upon the assumption that state read-write (ie. setting and getting `active`, `wait` etc.) provide [`linearizibility`](http://en.wikipedia.org/wiki/Linearizability) is:
 
 **Assumption: If a write operation finishes before a read invocation, then the read operation must yield the previously set value.** Formally:
 
@@ -340,13 +340,13 @@ Note that obviously we assume that there was no other write operation between th
 
 ### Internal properties ###
 
-**Lemma 1: If they run in parallel, then one of the threads detects the other as active, hence enters the wait loop in the guard**. Formally:
+**Lemma 1: If they run in parallel, then one of the threads detects the other as active, hence enters the wait loop in the guard**.
 
 **Lemma 2: Exiting criterias of the guard's wait loop**:
 
 1. A thread might leave the guard's wait loop 
    1. if the other thread is/becomes inactive or 
-   2. if the thread is marked to not wait
+   2. if the thread is marked to not wait (which should be issued after the thread marked itself to wait)
 1. A thread can be marked to not wait
    1. only by the other thread
    1. only when the other thread is in the wait loop
@@ -360,9 +360,9 @@ Note that obviously we assume that there was no other write operation between th
    1. the exiting thread is not the waker and 
    1. the other thread is still in the guard as a waker
 
-**Lemma 4: If a thread exits or avoids the guard then it has not waken the other thread up**
+**Lemma 4: If a thread does not enter or leaves the guard then it has not waken the other thread up**
 
-**Lemma 5: If this thread was still active when the other thread deactivated then either (1) this thread will deactivate before the other reenters or (2) the other thread enters the guard**
+**Lemma 5: If this thread was still active when the other thread deactivated then either (1) this thread will deactivate before the other reenters the protocol or (2) the other thread enters the guard.**
 
 ### Wait-free ###
 
