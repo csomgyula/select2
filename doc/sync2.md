@@ -41,14 +41,11 @@ initial states:
         # wait until the other thread is deactived or marks this thread to not wait
         while active[i + 1] and wait[i]:
 
-            # if this is waker either wake up the other thread or acknowledge waker change
-            if waker == i:
-
-                # if waker change is not in progress mark the other thread to not wait
-                if not waker_change: wait[i + 1] = false
+            # if this is waker wake up the other thread
+            if waker == i: wait[i + 1] = false
                     
-                # otherwise if change is in progress then acknowledge it
-                else: waker_change = false
+            # if waker change is in progress then acknowledge it
+            if waker_change: waker_change = false
 
             yield
 
@@ -408,13 +405,14 @@ However `thread i` executed its wake up statement before `thread i+1` was acknow
 
 This contradicts to the indirect assumption that the wake up statement happened after the origo point. Formally both `wait[i+1] == false << origo` and `origo < wait[i+1] == false` holds which is contradiction.
 
-**(ii) Wait-free if protocol is safe**:
+**(ii) Wait-free if protocol is safe**: Indirectly assume that a thread (say `thread i`) is blocked in the waker-change wait loop.
 
-Just before this (previously non-waker) thread entered the waker-change loop the other (previously waker) thread must have been active, otherwise it does not enter the loop. 
+Since `thread i` entered the wait loop, just before it the other thread was active. If the protocol is safe then according to Theorem 1 both thread cannot stay at the selection stage, hence the other thread must have been in the guard stage when `thread i` issued its `if active[i+1]` check.
 
-If the protocol is safe then according to Theorem 1 both thread cannot stay at the selection stage, hence the other thread must have been in the guard stage. 
+Since `thread i` is blocked in the waker-change wait loop, according to Theorem 1 the other thread must be blocked in the guard wait loop. Since if it left the guard stage this contradicts Theorem 1 (both thread cannot stay at the selection stage). 
 
-Since this thread is staying in a wait loop the other thread must eventually enter its guard wait (it detects this thread active). There and then it acknowledges the waker-change, which breaks the waker-change loop.
+Hence `thread i+1` is blocked in the guard wait loop. There and then it will detect that waker-change is in progress, hence acknowledge it which breaks the wait loop of `thread i`. Contradiction.
+ 
 
 *TODO: formalize safety, informally it means: if both thread is in the wait loop then only one thread can mark the other to not wait.*
 
