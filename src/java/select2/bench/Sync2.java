@@ -55,11 +55,9 @@ public class Sync2 implements Executor{
 
 				// if this is waker wake up the other thread
 				if (waker == i){ wait[(i + 1) % 2] = false; }
-				Thread.yield();
 				
 				// if waker change is in progress then acknowledge it
 				if (waker_change){ waker_change = false; }
-                Thread.yield();
 				
 				System.out.println("guard_wait(" + i + ")");
 				
@@ -98,10 +96,7 @@ public class Sync2 implements Executor{
 			   waker_change = true;
 
 			   // wait until the other thread acknowledges the change
-			   int spin = 0;
-			   while (waker_change){
-					Thread.yield(); 
-				}
+			   while (waker_change){ Thread.yield(); }
 			}
 			else{
 				    System.out.println("no_waker_wait(" + i + ")");
