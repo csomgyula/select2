@@ -112,10 +112,10 @@ The problem with the simplest protocol is that it does not guard against the cas
         while active[i + 1]: yield
 
     # mark this selected 
-    select[i] = true
+    selected[i] = true
 
     # mark this unselected
-    select[i] = false
+    selected[i] = false
 
     # mark this inactive
     active[i] = false
@@ -151,10 +151,10 @@ The problem with the above safe protocol is the case when both thread executes i
             yield
 
     # mark this selected 
-    select[i] = true
+    selected[i] = true
 
     # mark this unselected
-    select[i] = false
+    selected[i] = false
 
     # mark this inactive
     active[i] = false
@@ -215,11 +215,11 @@ Now both thread is marked to not wait, hence might leave the wait loop in parall
 Formally a history could look like this:
 
     thread 0: if waker == 0   # which yields true at this time
-    thread 1: if not waker == 1: waker = 1
-    thread 1: active[1] = false
-    thread 1: active[1] = true
-    thread 1: if active[0]
-    thread 1: wait[1] = true
+    thread 1: if not waker == 1: waker = 1 # waker-change when busy state begin
+    thread 1: active[1] = false # deactivate
+    thread 1: active[1] = true # immediately activate
+    thread 1: if active[0] # issue guard check
+    thread 1: wait[1] = true # enter wait
     thread 1: while active[0] and wait[1] # now both thread is in the wait loop as a waker 
     thread 1: wait[0] = false # marks thread 0 to not wait 
     thread 0: wait[1] = false # marks thread 1 to not wait
