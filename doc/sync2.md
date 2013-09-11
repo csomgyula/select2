@@ -288,54 +288,70 @@ Note that obviously we assume that there was no other write operation between th
 
 ### Internal properties ###
 
-**Definition: *entering the guard's wait loop* means that the guard check evaluated to true: `active[i+1]` is true and the associated thread already marked itself to wait: `wait[i] = true`**.
+**Definition 1: Entering and exiting the guard's wait loop:** 
 
-**Definition: ordering of statements**: 
+*Entering the guard wait loop* means that the guard check evaluated to true: `active[i+1]` is true and the associated thread marked itself to wait: `wait[i] = true`**. Formally it is written as:
+
+    (1) entered_guard_wait(i) := wait[i] = true finished
+
+*Leaving the guard's wait loop* means that the condition evaluated to false: `not active[i+1] or not wait[i]`. Formally it is written as:
+
+    (2) exited_guard_wait(i) := active[i+1] and wait[i] evaluated to false
+
+
+**Definition 2: Guard and selection stage:** 
+
+*Guard stage* means that the thread already activated itself (or at least invoked the write operation) but has not yet finished the last guard statement, where the last guard statement for thread i could be either:
+
+Case 1 - In case it did not enter the wait loop then the last guard statement is: `if active[i+1]` and this statement must evaluate to false.
+
+Case 2 - In case it broke the wait loop when either the other thread became inactive or the wait flag is set to false then the last guard statement is the evaluation of the wait condition: `active[i+1] and wait[i]` and the condition must evaluate to false that is either `not active[i+1]` or `not wait[i]`.
+
+*Selection stage* means that the thread is active and is not in the guard stage. In other words it already finished its last guard statement but not yet deactivated itself (at least the write operation has not yet finished).
+
+
+**Definition 3: ordering of statements and states**: 
 
 * `statement1 < statement2` means that `statement2` was invoked later
 * `statement1 <= statement2` means that `statement2` was invoked not sooner (later or at the same time)
 * `statement1 << statement2` means that `statement2` was invoked later then `statement1` finished 
-* The ordering is extended to cover states as well. That case by statement we mean the corresponding write operation.
+* The ordering is extended to cover states as well. In this case by 'statement' I mean the corresponding write operation. For instance `state << statement` means that the `statement` was invoked later then the write operation of `state` finished.
 
-From the definition it follows that `<` and `<<` provides a partial ordering of states and statements, and `<=` provides a total ordering.
+From the definition it follows that `<` and `<<` provides a partial ordering of states and statements, and `<=` provides a total ordering (except for the fact that the latter is reflexive).
+
 
 **Lemma 1: If the threads run in parallel, then one of them detects the other as active, hence enters the wait loop of the guard**. Formally:
 
 if threads executes their guard checks before the other thread deactivates itself:
 
     (1) if active[i+1] << activate[i+1] = false : i = 0, 1
-    (1) guard_check(i) << deactivation(i+1) : i = 0, 1
 
 then one of the threads detects the other thread active:
 
     (2) active[i+1] is true for i = 0 or 1
-    (2) other_is_active(i) for i = either 0 or 1
 
 hence enters the guard wait loop:
 
     (3) if active[i+1] < wait[i] = true
-    (3) guard_check(i) < other_is_active(i) < enter_guard_wait(i)
 
 Proof: The thread (say `thread i`) that issued its guard statement later (`if active[i+1]`) will detect the other as active. Details: 
 
 Take that thread (say `thread i+1`) that issued its guard check later (or at least not sooner) than the other one. Formally:
 
     (4) if active[i+1] <= if active[i]
-    (4) guard_check(i) <= guard_check(i+1)
 
 Due to (1, 4) and since guard check is executed after thread activation:
 
     (5) active[i] = true << if active[i+1] <= if active[i] << active[i]=false
-    (5) activate(i) << guard_check(i) <= guard_check(i+1) << deactivate(i)
 
 From (5) it follows that:
 
     (6) active[i] = true << if active[i]
-    (6) activate(i) << guard_check(i+1)
 
 In words: the activation of `thread i` finished before `thread i+1` invoked its guard check. 
 
 From (6) and the Assumption it follows that `active[i]` was already set to true when `thread i+1` evaluated its guard check and not yet set to false, hence it detected the other thread as active and entered its wait loop.
+
 
 **Lemma 2: Exit criterias of the guard's wait loop**:
 
@@ -349,21 +365,21 @@ From (6) and the Assumption it follows that `active[i]` was already set to true 
 
 Proof: Obvious from the protocol definition.
 
-**Definition: Guard stage, wait-loop, selection stage**
 
 **Lemma 3:**
 
 (i) **Waker is safe**. Formally:
  
-If both thread is in its guard wait loop at some point in time 
+If both thread is in its guard wait loop at some point in time and assuming that `thread i` is the waker
 
-    (1) wait[i] = true and wait[i+1] = true
+    (1) waker == i and wait[i] = true and wait[i+1] = true
 
-then after that the non-waker thread cannot execute a wakeup statement
+then after that the non-waker thread cannot execute a wakeup statement until it leaves the wait loop:
 
-    (2) wait[i+1] = false => waker == i (at wait[i] = true and wait[i+1] = true)
+    (2) entered_guard_wait(j) < wait[j] = false < exited_guard_wait(j) => i == j
 
-(ii) **If the protocol is safe (according to Theorem 1) then the waker change is wait-free. That is the wait loop of the waker change does not block forever.**
+
+(ii) **If the protocol is safe (according to Theorem 1) then the waker change is wait-free. That is the wait loop of the waker change cannot not block forever.**
 
 Proof:
 
@@ -371,23 +387,25 @@ Proof:
 
 To put it simply the waker-change protocol is safe because the thread who changes waits until the other thread acknowledges the change. Details:
 
-(1) Indirectly assume that both thread is in its guard wait loop at some point in time and after that the non-waker (say `thread i`) executes a wakeup statement. Lets call that time the `origo` point. Hence the indirect assumption can be formally written as:
+(1) Indirectly assume that both thread is in its guard wait loop at some point in time (lets call this time the *origo*) and after that the non-waker (say `thread i`) executes a wakeup statement within the same loop. Hence the indirect assumption can be formally written as:
 
-    origo < wait[i+1] = false
+    entered_guard_wait(i) <= origo < wait[i+1] = false < exited_guard_wait(i)
 
-(2) In order to execute a wakeup statement `thread i` should have previously evaluated itself as the waker. Since at the origo point this condition was already false, the evaluation must have happened before. Formally:
+(2) In order to execute a wakeup statement `thread i` should have previously evaluated itself as the waker. Since at the *origo* point this condition was already false, the evaluation must have happened before. Formally:
 
-    if waker == i < origo < wait[i+1] = false
+    if waker == i <= origo < wait[i+1] = false
 
-(3) At the time of the check, the `waker` value was `i`, hence the value must have been changed to `i+1` after the above waker-check and before the `origo` point (when it was already `i+1`). Formally:
+(3) At the time of the above check, the `waker` value was `i`. Hence the waker value must have been changed to `i+1` after the above waker-check and before the *origo* point (when it was already `i+1`). Formally:
 
     if waker == i <= waker = i+1 <= origo
 
-(4) The waker change was issued by `thread i+1`. At that time it was after the guard stage, hence the waker-change must have happened before it reentered the protocol again and went into the guard wait loop. Hence waker change happened before the origo:
+(4) The above waker-change was issued by `thread i+1`. At that time it was after its *guard stage*, hence the waker-change must have happened before it reentered the protocol again and went into the guard wait loop. 
+
+Hence the above waker-change happened before the *origo* point:
 
     waker = i+1 << origo
 
-(5) Due to the indirect assumption `thread i+1` left the guard stage (did not block in the waker change loop) and reentered the protocol. It follows that  after the waker-change and before the origo point `thread i+1` deactivated itself :
+(5) Due to the indirect assumption `thread i+1` left its *selection stage* (did not block in the waker-change loop) and reentered the protocol again. It follows that  after the waker-change and before the *origo* point `thread i+1` deactivated itself :
 
     waker = i+1 << active[i+1] = false << origo
 
@@ -395,77 +413,90 @@ To put it simply the waker-change protocol is safe because the thread who change
 
     if waker == i <= waker = i+1 << active[i+1] = false << origo < wait[i+1] = false
 
-(7) During this time period (between waker change and when `thread i+1` reentered the protocol) `thread i` was and remained active since they were both in the wait loop at the origo point (or take this: the first and the last statement above was issued by `thread i` within the same wait loop). 
+(7) During this time period (between waker change and when `thread i+1` reentered the protocol) `thread i` was and remained active since at the *origo* point both thread was in its wait loop (or take this: the first and the last statement above was issued by `thread i` within the same wait loop). 
 
 It follows that when changing the waker value, then `thread i+1` should have detected the other thread active. Hence it went into the waker-change wait loop and stayed there until `thread i` acknowledged the change.
 
 However `thread i` executed its wake up statement before `thread i+1` was acknowledged, hence before the origo point. Formally:
 
-    if waker == i << wait[i+1] == false << waker_change = false < active[i+1] = false << origo
+    wait[i+1] == false << waker_change = false < active[i+1] = false << origo
 
 This contradicts to the indirect assumption that the wake up statement happened after the origo point. Formally both `wait[i+1] == false << origo` and `origo < wait[i+1] == false` holds which is contradiction.
 
 **(ii) Wait-free if protocol is safe**: Indirectly assume that a thread (say `thread i`) is blocked in the waker-change wait loop.
 
-Since `thread i` entered the wait loop, just before it the other thread was active. If the protocol is safe then according to Theorem 1 both thread cannot stay at the selection stage, hence the other thread must have been in the guard stage when `thread i` issued its `if active[i+1]` check.
+Since `thread i` entered the wait loop, hence just before that the other thread was active (because before entering the loop the thread checks whether the other one is active). If the protocol is safe then according to Theorem 1 both thread cannot stay at the selection stage, hence the other thread must have been in the guard stage when `thread i` issued its `if active[i+1]` check.
 
-Since `thread i` is blocked in the waker-change wait loop, according to Theorem 1 the other thread must be blocked in the guard wait loop. Since if it left the guard stage this contradicts Theorem 1 (both thread cannot stay at the selection stage). 
+Since according to the indirect asumption `thread i` is blocked in the waker-change wait loop, according to Theorem 1 the other thread must be blocked in the guard wait loop. Otherwise if it left the *guard stage* then it would contradict Theorem 1 (*both thread cannot stay at the selection stage*). 
 
-Hence `thread i+1` is blocked in the guard wait loop. There and then it will detect that waker-change is in progress, hence acknowledge it which breaks the wait loop of `thread i`. Contradiction.
- 
+Hence `thread i+1` is blocked in its guard wait loop. Then and there it will detect that waker-change is in progress, hence acknowledge it which then breaks the wait loop of `thread i`. Contradiction.
 
-*TODO: formalize safety, informally it means: if both thread is in the wait loop then only one thread can mark the other to not wait.*
+From the above lemma it follows that:
 
-**Corollary: If both thread is in the wait loop at the same time, then the waker thread won't leave the wait loop until the other is deactivated**
+**Corollary 1: If both thread is in the wait loop at the same time, then the waker thread won't leave the wait loop until the other is deactivated**
 
-*Proof*: According to the previous lemma the waker role is safe. Hence only the waker thread will mark the non-waker thread to not wait, the non-waker can't do that. That is: the non-waker thread will leave its wait loop and at that time  the waker thread's wait flag remains true. Hence the waker thread can't leave its wait loop until either the non-waker thread is deactivated or it reenters the protocol. In both case the non-waker thread is deactivated before the waker thread leaves its wait loop.
+*Proof*: According to the previous lemma the waker role is safe, hence only the waker thread will mark the non-waker thread to not wait, the non-waker can't do that. Hence the non-waker thread will leave its wait loop and at that time  the waker thread's wait flag remains true. Hence the waker thread can't leave its wait loop until either the non-waker thread is deactivated or its wait flag is set to false. In both case the non-waker thread is deactivated before the waker thread wakes up.
+
 
 ### Safe ###
 
 **Theorem 1: The synch2 protocol is safe that is threads are never selected simultaneously. In fact a bit more is true: threads cannot stay at the selection stage simultaneously.** 
 
-Proof: Indirectly assume that both thread entered the selection stage and are still active at some point in time. 
+Proof: Indirectly assume that both thread entered the *selection stage* and are still active at some point in time. 
 
-(1) Take that thread (say `thread i`) which left the guard stage later (or at least not sooner) than the other one. The last statement it issued in the guard stage could be one of the following ones:
+(1) Take that thread (say `thread i`) which left the guard stage later (or at least not sooner) than the other one. The last statement it issued in the *guard stage* could be one of the following ones:
 
-*Case 1 - In case it did not enter the wait loop then the last guard statement was:*
+*Case 1 - In case it did not enter the wait loop* then the last guard statement was
 
     if active[i+1]
 
 and it evaluated to false.
 
-*Case 2 - In case it broke the wait loop when the other thread became inactive then the last guard statement was:*
+*Case 2 - In case it broke the wait loop when either the other thread became inactive or the wait flag is set to false* then the last guard statement was the evaluation of the wait condition: `active[i+1] and wait[i]` and the condition evaluated to false. There are two possible subcases:
 
-    if active[i+1]: break
+*Case 2.1 - In case it broke the wait loop after the other thread became inactive, then:*
 
-*Case 3 - In case it broke the wait loop after the other thread marked it to not wait:*
+    active[i+1]
 
-    if not wait[i]: break
+evaluated to false.
 
-The first two case is impossible, because `thread i+1` left the guard stage sooner (or at least not later), hence it was still active when `thread i` left the guard stage. 
+*Case 2.2 - In case it broke the wait loop when the other thread was still active and after the other thread marked it to not wait, then:*
 
-Hence `thread i` which left the guard stage later (or at least not sooner) was in its wait loop just before leaving the guard stage and left the wait loop because its wait flag was set to false.
+    wait[i]
 
-(2) Due to (1) previously `thread i+1` must have marked `thread i` to not wait  when it was already in its wait loop (more precisely when it already marked itself to wait) and `thread i` left the wait loop after it was marked to not wait. Formally:
+evaluated to false.
 
-    wait[i] = true < wait[i] = false < if not wait[i]: break
+The first two cases (Case 1 and Case 2.1.) is impossible. `thread i+1` left the *guard stage* sooner (or at least not later), hence due to the indirect assumption `thread i+1` was in the *selection stage* when `thread i` left the *guard stage*. 
+
+Hence `thread i` which left the guard stage later (or at least not sooner) was in its wait loop just before leaving the *guard stage* and left the wait loop because its wait flag was set to false.
+
+(2) Due to (1) previously `thread i+1` must have marked `thread i` to not wait. This must have been happened after `thread i` already entered its wait loop (ie. after it already marked itself to wait) and before `thread i` left the wait loop. Formally:
+
+    entered_guard_wait(i) < wait[i] = false < exited_guard_wait(i)
 
 (3) Obviously at the time when `thread i+1` marked the other thread to not wait it must have been in a wait loop as well.
 
-Due to (1, 3) both threads were in a wait loop, hence according to Lemma the waker thread could not leave its wait loop until the non-waker became inactive. Due to (2) this case `thread i+1` was the waker, hence it did not leave its wait loop until `thread i` was deactivated. Contradiction.
+Due to (1, 3) both threads were in a wait loop, hence according to Corollary 1 the waker thread could not leave its wait loop until the non-waker became inactive. Due to (2) this case `thread i+1` was the waker, hence it did not leave its wait loop until `thread i` was deactivated. Contradiction, since `thread i+1` left the guard stage earlier then `thread i`.
 
-It immediately follows from Lemma and Theorem 1 that:
 
-**Corollary: Waker change is wait-free**
+It immediately follows from Lemma 3 and Theorem 1 that:
+
+**Corollary 2: Waker change is wait-free**
 
 
 ### Wait-free ###
-
 
 **Theorem 2: The synch2 protocol is wait-free: if a thread enters the protocol it will finish in finite steps.** 
 
 Proof (draft):
 
-The waker change is wait free. Enough to prove that it does not block in the guard.
+Due to the above Corollary 2 the waker-change is wait free. Hence it is enough to prove that a thread cannot block in the guard wait loop forever.
 
-Indirectly if a thread blocks in the guard then the other thread must block as well or reenter infinite many times - otherwise this thread wakes up on the idle state of the other thread. If the other thread blocks as well that is a contradiction since one is waker who wakes up the other. It the other thread reenters infinitely then once it becomes a waker and wakes up the thread, which is a contradiction again.
+Indirectly assume that this thread (say `thread i`) blocks in the guard wait loop.
+
+It follows then that the other thread must either block as well or reenter the protocol infinite many times. Otherwise this thread wakes up on the idle state of the other thread. 
+
+*Case 1 - If the other thread blocks for ever as well*, then it must block in the guard wait loop as well, since the waker-change is wait-free. This is a contradiction since this means that both thread blocks in the guard wait loop. However one thread is the waker who will wake up the other. 
+
+*Case 2 - If the other thread reenters the protocol infinite many times* then eventually it enters the protcol as a waker. Since `thread i` is blocked in its loop, the other thread will detect it active and go into its wait loop as well. However since the other thread is the waker it will wake up `thread i`, which is a contradiction again.
+
