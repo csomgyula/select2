@@ -291,7 +291,7 @@ Here I used the following formalism:
 
 **Definition 1: Entering and exiting the guard's wait loop:** 
 
-*Entering the guard wait loop* means that the guard check evaluated to true: `active[i+1]` is true and the associated thread marked itself to wait: `wait[i] = true`**. Formally it is written as:
+*Entering the guard wait loop* means that the guard check evaluated to true: `active[i+1]` is true and the associated thread marked itself to wait: `wait[i] = true`. Formally it is written as:
 
     (1) entered_guard_wait(i) := wait[i] = true finished
 
@@ -302,7 +302,7 @@ Here I used the following formalism:
 
 **Definition 2: Guard and selection stage:** 
 
-*Guard stage* means that the thread already activated itself (or at least invoked the write operation) but has not yet finished the last guard statement, where the last guard statement for thread i could be either:
+*Guard stage* means that the thread already activated itself (or at least invoked the corresponding write operation on `active[]`) but has not yet finished the last guard statement. Here the last guard statement for `thread i` could be either:
 
 Case 1 - In case it did not enter the wait loop then the last guard statement is: `if active[i+1]` and this statement must evaluate to false.
 
