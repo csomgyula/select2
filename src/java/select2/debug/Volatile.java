@@ -34,19 +34,15 @@ public class Volatile{
 			// guard
 			switch(i){
 				case 0: 
-					if (state1 != State.IDLE){   
-						state0 = State.WAIT;
-					}; 
+					if (state1 != State.IDLE){ state0 = State.WAIT; }; 
 					break;
 				case 1: 
-					if (state0 != State.IDLE){   
-						state1 = State.WAIT;
-					}; 
+					if (state0 != State.IDLE){ state1 = State.WAIT; }; 
 					break;
 			}
 			try{Thread.sleep(1+i);}catch(Throwable ignore){};
 			
-			// assert
+			// assert: one thread must not be ACTIVE
 			if( state0 == State.ACTIVE && state1 == State.ACTIVE ){
 				state = State.ERROR;
 			}
