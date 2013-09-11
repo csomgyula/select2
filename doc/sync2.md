@@ -4,16 +4,20 @@
 Protocol
 -------------------------------------------------------------------------------
 
+Threads are numbered as `0` and `1` in the protocol.
+
+
+_Note that `i + 1` means `(i+1) % 2` in the following sections._
 
 ### States ###
 
 states:
 
-* `active[i]: boolean` - marks whether thread i is selected
-* `wait[i]: boolean` - marks whether thread i is to wait
+* `active[i]: boolean` - marks whether `thread i` is selected
+* `wait[i]: boolean` - marks whether `thread i` is to wait
 * `waker: 0..1` - shows which thread is the waker
 * `waker_change: boolean` - marks whether there is a waker change in progress
-* `selected[i]: boolean` - marks whether thread i is selected (useful for debugging purposes)
+* `selected[i]: boolean` - marks whether `thread i` is selected (useful for debugging purposes)
 
 initial states:
 
