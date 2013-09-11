@@ -17,6 +17,10 @@ States are the ones those are in the pseudo code, ie.:
 
 ### Pseudo code ###
 
+    # #######################################################################
+    # guard stage
+    # #######################################################################
+
     # mark this thread as active
     active[i] = true
 
@@ -39,6 +43,10 @@ States are the ones those are in the pseudo code, ie.:
                 else: waker_change = false
 
             yield
+
+    # #######################################################################
+    # selection stage
+    # #######################################################################
 
     # mark this selected 
     selected[i] = true
