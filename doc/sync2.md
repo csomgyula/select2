@@ -277,6 +277,8 @@ then the read operation must return the previously set value:
 
     v = w
 
+*Note that obviously we assume that there was no other write operation between them.*
+
 Here I used the following formalism:
 
 * `invoke_set(i, state, v)` means that thread `i` invokes a write operation on the given `state` indicating to set the state to `v`
@@ -284,7 +286,6 @@ Here I used the following formalism:
 * `invoke_get(j, state)` means that thread `j` invokes a read operation on the given `state`
 * `return_get(j, state, w)` means that the previous read operation finished and returned `w`
 
-Note that obviously we assume that there was no other write operation between them.
 
 ### Internal properties ###
 
