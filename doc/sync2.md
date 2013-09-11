@@ -7,13 +7,21 @@ Protocol
 
 ### States ###
 
-States are the ones those are in the pseudo code, ie.:
+states:
 
-* `active[i]` - marks whether thread i is selected
-* `wait[i]` - marks whether thread i is to wait
-* `waker` - shows which thread is the waker
-* `waker_change` - marks whether there is a waker change in progress
-* `selected[i]` - marks whether thread i is selected
+* `active[i]: boolean` - marks whether thread i is selected
+* `wait[i]: boolean` - marks whether thread i is to wait
+* `waker: 0..1` - shows which thread is the waker
+* `waker_change: boolean` - marks whether there is a waker change in progress
+* `selected[i]: boolean` - marks whether thread i is selected (useful for debugging purposes)
+
+initial states:
+
+* `active[i] = {false, false}`
+* `wait[i] = {false, false}`
+* `waker = 0`
+* `waker_change = false`
+* `selected[i] = {false, false}`
 
 ### Pseudo code ###
 
@@ -51,7 +59,7 @@ States are the ones those are in the pseudo code, ie.:
     # mark this selected 
     selected[i] = true
 
-    # mark this deselected
+    # mark this unselected
     selected[i] = false
 
     # change waker if this is not the one
@@ -105,7 +113,7 @@ The problem with the simplest protocol is that it does not guard against the cas
     # mark this selected 
     select[i] = true
 
-    # mark this deselected
+    # mark this unselected
     select[i] = false
 
     # mark this inactive
@@ -144,7 +152,7 @@ The problem with the above safe protocol is the case when both thread executes i
     # mark this selected 
     select[i] = true
 
-    # mark this deselected
+    # mark this unselected
     select[i] = false
 
     # mark this inactive
@@ -182,7 +190,7 @@ It looks like that by breaking the symmetry we became unfair to thread 0. So let
     # mark this selected 
     selected[i] = true
 
-    # mark this deselected
+    # mark this unselected
     selected[i] = false
 
     # change waker if this is not the one
