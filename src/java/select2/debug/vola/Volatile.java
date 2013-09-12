@@ -1,4 +1,4 @@
-package select2.debug;
+package select2.debug.vola;
 
 public class Volatile{
 	
