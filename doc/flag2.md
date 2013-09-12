@@ -72,6 +72,10 @@ methods
          monitor = null
 
 
+`wait_while(v)` - wait while the flag is `v`, the code is simply the negation of `wait_until`:
+
+    wait_until(not v) 
+
 internal methods:
 
 `is_monitor`
