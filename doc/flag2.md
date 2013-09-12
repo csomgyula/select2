@@ -1,7 +1,7 @@
 `flag2` synchronization primitive
 ==
 
-It implements a wait-free conditional wait for 2 threads. It is similar to [wait()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#wait%28%29) and [notify()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#notify%28%29) in Java, just wait-free.
+It implements kinda wait-free conditional wait for 2 threads. It is similar to [wait()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#wait%28%29) and [notify()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#notify%28%29) in Java, just wait-free.
 
 assumptions 
 --
@@ -85,6 +85,8 @@ internal methods:
 
 properties
 --
+
+**if wait is issued when the condition is true it terminates immediately**
 
 **if set is invoked after wait then wait terminates if no more set is issued**
 
