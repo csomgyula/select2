@@ -17,7 +17,7 @@ The protocol has the following states:
 
 `value: boolean` - the value of the flag
 
-`until_value: boolean` - if there is wait on this flag then this is the condition value, ie. if until_value is true then a thread is waiting until the flag becomes true
+`until_value: boolean` - if there is wait on this flag then this is the condition value, ie. if `until_value` is true then a thread is waiting until the flag becomes true
 
 `until_monitor: null | MONITOR_TRUE | MONITOR_FALSE` - if there is wait on this flag then this is the associated monitor, otherwise null
 
