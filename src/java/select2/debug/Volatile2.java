@@ -1,14 +1,14 @@
 package select2.debug;
 
-public class Volatile{
+public class Volatile2{
 	
-	protected static class TestVolatile{
+	protected static class TestVolatile2{
 		private final long[] threadIds;
-		private volatile State state0;
-		private volatile State state1;
+		private State state0;
+		private State state1;
 		private volatile State state;
 		
-		public TestVolatile(Thread[] threads){	
+		public TestVolatile2(Thread[] threads){	
 			threadIds = new long[2];
 			for (int i = 0; i<2;i++){
 				threadIds[i] = threads[i].getId();
@@ -50,12 +50,12 @@ public class Volatile{
 			else{ return 1; }
 		}		
 	
-		protected void setState(int i, State state){
+		protected synchronized void setState(int i, State state){
 			if( (i % 2) == 0 ){ state0 = state; }
 			else{ state1 = state; }
 		}
 
-		protected State getState(int i){
+		protected synchronized State getState(int i){
 			if( (i % 2) == 0 ){ return state0; }
 			else{ return state1; }
 		}	
@@ -66,10 +66,10 @@ public class Volatile{
 		IDLE, GUARD, WAIT, ACTIVE, OK, ERROR
 	}
 	
-	protected static class TestVolatileThread extends Thread{
-		private TestVolatile test;
+	protected static class TestVolatile2Thread extends Thread{
+		private TestVolatile2 test;
 		
-		public void setTest(TestVolatile test){ this.test = test; }
+		public void setTest(TestVolatile2 test){ this.test = test; }
 		
 		public void run(){
 			int step = 0;
@@ -83,11 +83,11 @@ public class Volatile{
 	
 	
 	public static void main(String[] args){
-		TestVolatileThread[] threads = new TestVolatileThread[2];
-		threads[0] = new TestVolatileThread();
-		threads[1] = new TestVolatileThread();
+		TestVolatile2Thread[] threads = new TestVolatile2Thread[2];
+		threads[0] = new TestVolatile2Thread();
+		threads[1] = new TestVolatile2Thread();
 		
-		TestVolatile test = new TestVolatile(threads);
+		TestVolatile2 test = new TestVolatile2(threads);
 		
 		threads[0].setTest(test);
 		threads[1].setTest(test);
