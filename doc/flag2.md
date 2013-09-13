@@ -36,7 +36,7 @@ methods
      if waiting:
 
         # if the the new value is the one waited for, notify the waiting thread
-        if value == until_value:
+        if until_value == v:
 
             # wait is synchronized
             synchronized(this): 
@@ -57,13 +57,13 @@ methods
          waiting = true
 
          # wait while the flag differs from the conditional value
-         while not (value == until_value): 
+         while not (value == v): 
 
              # wait is synchronized on the monitor
              synchronized(this):
              
                  # recheck the condition
-                 if not (value == until_value): 
+                 if not (value == v): 
 
                      # wait on the monitor
                      wait
@@ -80,12 +80,16 @@ methods
 properties
 --
 
-**if wait is issued when the condition is true it terminates immediately**
+**Property 1: If the wait is issued when the condition is true it terminates immediately**
 
-**if set is invoked after wait then wait terminates if no more set is issued**
+**Property 2: If the appropiate `set()` is invoked after wait then this wait terminates if no other wait is issued in parallel with or after this one**. Formally:
 
     wait_until(v) < set(v) => wait_until terminates 
 
+
+*Note that this version of wait supports only one wait. Otherwise if another wait is called then the previous might block. Meanwhile issuing multiple sets during wait is not a problem.*
+
+Proof:
 
 *Case 1 - wait is not issued*
 
