@@ -1,7 +1,9 @@
 `flag2` synchronization primitive
 ==
 
-It implements kinda wait-free conditional wait. It handles only 2 threads. It enables to wait until a flag becomes true or false. It is similar to [wait()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#wait%28%29) and [notify()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#notify%28%29) in Java, just wait-free.
+It implements kinda wait-free conditional wait, is similar to [wait()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#wait%28%29) and [notify()](http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#notify%28%29) in Java, just wait-free.
+
+It handles only 2 threads. `flag2` enables one of the threads to wait until a flag becomes true or false w/o busy polling, ie. instead of a `flag = false; while(not flag){...}` loop you can put `flag.waitWhile(false)` and the thread goes to sleep while the flag is false.
 
 assumptions 
 --
@@ -27,22 +29,22 @@ methods
 
 `get()` - get the value of the flag
 
-`set(v)` - set the value of the flag to the arg, pseudo code:
+`set(v)` - set the value of the flag and wakes up the waiting thread if there's any and the wait condition is met, pseudo code:
 
      # chage the value
      value = v
 
-     # check whether there is a wait
-     if waiting:
+     # check whether there is a wait and whether the new value is the one waited for, if yes, then notify the waiting thread
+     if waiting and until_value == v:
 
-        # if the the new value is the one waited for, notify the waiting thread
-        if until_value == v:
+         # wait is synchronized on this
+         synchronized(this): 
 
-            # wait is synchronized
-            synchronized(this): 
+             # unset the wait flag
+			 waiting = false;
 
-                # notify the thread that is waiting
-                notify
+             # notify the thread that is waiting
+             notify
 
 
 `wait_until(v)` - wait until the flag becomes `v`, pseudo code:  
@@ -56,21 +58,26 @@ methods
          # mark waiting
          waiting = true
 
-         # wait while the flag differs from the conditional value
-         while not (value == v): 
+     	 # recheck the condition
+     	 if not (value == v):
 
-             # wait is synchronized on the monitor
-             synchronized(this):
+             # wait while wait flag is true ie. the flag differs from the conditional value
+         	 while waiting: 
+
+                 # wait is synchronized on this
+                 synchronized(this):
              
-                 # recheck the condition
-                 if not (value == v): 
+                     # recheck whether waiting
+                     if waiting: 
 
-                     # wait on the monitor
-                     wait
+                         # wait on this
+                         wait
 
-         # not waiting
-         waiting = false
+         # the condition so far became true
+         else:
 
+             # not waiting
+             waiting = false
 
 `wait_while(v)` - wait while the flag is `v`, the code is simply the negation of `wait_until`:
 
@@ -80,41 +87,46 @@ methods
 properties
 --
 
-**Property 1: If the wait is issued when the condition is true it terminates immediately**
+**Property 1: If the wait is issued when the condition is true it terminates immediately if a parallel set is not updating the condition value**
 
-**Property 2: If the appropiate `set()` is invoked after wait then this wait terminates if no other wait is issued in parallel with or after this one**. Formally:
+    set(v) << wait_until(v) => wait_until immediately terminates 
+
+**Property 2: If the appropiate `set()` is invoked after wait then this wait terminates if:**
+
+* **(i) no other wait is issued in parallel with or after this one**
+* **(ii) no other `set` is issued before `wait_until` terminates**
+
+Formally:
 
     wait_until(v) < set(v) => wait_until terminates 
-
-
-*Note that this version of wait supports only one wait. Otherwise if another wait is called then the previous might block. Meanwhile issuing multiple sets during wait is not a problem.*
 
 Proof:
 
 *Case 1 - wait is not issued*
 
-It either means that the condition is true or the thread is blocked in the` synchronization`. The latter cannot happen due to the conditions.
+It either means that the condition is true or the thread is blocked in the `synchronization`. The latter cannot happen due to the conditions.
 
 
 *Case 2 - wait is issued but notify is not*
 
-`notify` is not issued due to either `wait` was false or the thread blocked in the synchronized. The latter could not happen, hence monitor was null at the time the thread checked it. That is the other thread has not yet set the wait flag to true:
+`notify` is not issued due to either `waiting` was false or the thread blocked in the synchronized. The latter could not happen, hence `waiting` was false at the time the setter thread checked it. That is the other thread (the waiter) has not yet set the wait flag to true:
 
     if waiting <= waiting = true
 
-since the value is already set (in this to case `until_value`) before the wait flag is checked:
+since the value was already set before the wait flag is checked:
 
     value = until_value << if waiting
 
-and wait flag is set before while condition is checked:
+and wait flag is set before the condition is rechecked:
 
-    waiting = true <<  while not (value == until_value)
+    waiting = true << if not (value = until_value)
 
-the waiter does not go into wait:
+the waiter does not go into wait since the check happend after the condition became true:
 
-    value = until_value <<  while not (value == until_value)
+    value = until_value << if not (value = until_value)
 
 contradiction.
+
 
 *Case 3 - wait is issued earlier then notify*
 
@@ -131,17 +143,63 @@ Hence it terminates due to the notification...
 
     notify < wait
 
-Again due to the `synchronized` block this means that notify finished earlier.
+Again due to the `synchronized` block this means that notify finished earlier:
 
     notify << wait
 
-Since `wait` runs in a `synchronized` block with another stament which rechecks the wait condition, the above means that `notify` happened before the waiter rechecked the condition:
+Since `wait` runs in a `synchronized` block with another stament which rechecks whether the wait flag is true, the above means that `notify` happened before the waiter rechecked the flag:
 
-    notify << if not (value == until_value)
+    notify << if waiting: wait
 
-Since `notify` is only called when `value` is already set to `until_value` and wait is only executed if the opposite is true (`not (value == until_value)`), this is a contradiction.
+Also before `notify` is issued that thread unset the wait flag, that is:
+
+    waiting = false << notify
+
+Since `wait` is only executed if the wait flag is true, this means that the waiter thread modified the wait flag between the above two statements:
+
+    waiting = false < waiting = true << if waiting: wait
+
+Hence the waiter thread rechecked the condition later then the value was set, since
+
+    value = v << waiting = false
+
+and
+
+    if not(value = v) << waiting = true
+
+This is a contradiction since the thread only goes to sleep if the recheck is true.
 
 
 *Case 5 - wait and notify issued at the same time*
 
 Could not happen due to the `synchronized` block
+
+
+**Property 3: If the appropiate `set()` is invoked after the thread went into wait then the wait terminates**
+
+Proof: evident, see Case 3 above.
+
+Notes: 
+
+* This version of wait supports only one wait. Otherwise if another wait is called then the previous might block. Reason: since `flag2` deals with 2 threads it does not make sense when both thread is waiting.
+* If two sets are issued before wait terminates it may happen that wait does not terminate. 
+
+Sample scenario:
+
+    thread 1: wait_until(v)
+    thread 0: set(v)
+    thread 0: value = v
+    thread 0: if waiting and until_value == v # evaluates to false
+    thread 0: returns
+    thread 0: set(not v)
+    thread 0: value = not v
+    thread 0: if waiting and until_value == v # evaluates to false
+    thread 0: returns
+    thread 1: if not (value == v) # evaluates to true
+    thread 1: waiting = true
+    ...
+
+### TODO ###
+
+* Java impl, test
+* wait might throw an error if another wait is already going on
