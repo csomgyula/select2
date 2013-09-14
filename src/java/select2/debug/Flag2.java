@@ -1,4 +1,4 @@
-package select2.test;
+package select2.debug;
 
 /**
  * It implements kinda wait-free conditional wait, is similar to 
@@ -47,19 +47,22 @@ public class Flag2{
 		value = v;
 
 		// check whether there is a wait and whether the new value is the one waited for, if yes then notify the waiting thread
-		if ( waiting && until_value == v){
+		if ( waiting ){ 
+			if(until_value == v){
 
-			// wait is synchronized on this
-			synchronized(this){
+				// wait is synchronized on this
+				synchronized(this){
 
-				// unset the wait flag
-				waiting = false;
-				
-				// notify the thread that is waiting
-				this.notify();
+					// unset the wait flag
+					waiting = false;
+					
+					// notify the thread that is waiting
+					this.notify();
+				}
 			}
 		}
 	}
+	
 	
 	/**
 	 * wait until the flag becomes v, will be waken up by the thread who set the value to v
@@ -77,32 +80,28 @@ public class Flag2{
 			
 			// recheck the condition
 			if (value != v){
-		 
 				// wait while the wait flag is true (ie the value differs from the conditional value)
 				while ( waiting ){ 
-
-					 // wait is synchronized on this
-					 synchronized(this){
-					 
+					// wait is synchronized on this
+					synchronized(this){
+					    if (waitTerminated){ waiting = false; throw new InterruptedException(); }
+						
 						// recheck the wait flag
 						if (waiting){
 					
-							Thread thisThread = Thread.currentThread();
-							if ( thisThread.isInterrupted() ) throw new InterruptedException();
-				            else{
-								// System.out.println("THREAD-" + thisThread.getId() + ":\tINTERRUPT: " + thisThread.isInterrupted() + " STATE: " + thisThread.getState() );
-							}
 							// wait on this
 							try{ this.wait(); } 
-							catch(InterruptedException interrupted){ throw interrupted; }
+							catch(InterruptedException interrupted){ waiting = false; throw interrupted; }
 							// catch(Throwable ignored){} // might be better handled in production quality
 						}
+						
+					    if (waitTerminated){ waiting = false; throw new InterruptedException(); }
 					}
 				}
 			}
 			// the condition so far became true
 			else{
-				// mark waiting
+				// unset the wait flag
 				waiting = false;				
 			}
 		}
@@ -121,53 +120,17 @@ public class Flag2{
 		waitUntil(!v);
 	}
 	
-
-	private volatile Coordination coordination = Coordination.WAITER_ACTIVE;
 	
-	protected enum Coordination{
-		WAITER_WAIT, SET_AND_SETTER_WAIT, WAITER_ACTIVE;
-	}
-
-	public void waiterWaitAndSetWakeup(){
+	private volatile boolean waitTerminated;
+	
+	public void terminateWait(){
 		synchronized(this){
-			if (coordination == Coordination.WAITER_ACTIVE){
-				System.out.println("THREAD-" + Thread.currentThread().getId() + ":\tWAITER_WAIT");
-				coordination = Coordination.WAITER_WAIT;
-				try{waitUntil(true);} catch(Throwable ignored){}
-				set(false);
-			}
-		}
-		
-		synchronized(coordination){
-			// System.out.println("THREAD-" + Thread.currentThread().getId() + ":\tWAITER_ACTIVE");
-			coordination = Coordination.WAITER_ACTIVE;
-			
-			if (coordination == Coordination.SET_AND_SETTER_WAIT){
-				coordination.notify();
-			}
+			waitTerminated = true;
+			this.notify();
 		}
 	}
 	
-	public int setAndSetterWait(int count){
-		synchronized(coordination){
-			synchronized(this){
-				if (coordination == Coordination.WAITER_WAIT){
-					coordination = Coordination.SET_AND_SETTER_WAIT;
-				}
-			}
-
-			if (coordination == Coordination.SET_AND_SETTER_WAIT){
-				System.out.println("THREAD-" + Thread.currentThread().getId() + ":\tSET_AND_SETTER_WAIT(" + count + ")");
-				set(true);
-				while (coordination == Coordination.SET_AND_SETTER_WAIT){
-					try{coordination.wait();} catch(Throwable ignored){}
-				}		
-				System.out.println("THREAD-" + Thread.currentThread().getId() + ":\tSETTER_ACTIVE(" + count + ")");
-				return 1;
-			}
-			else{
-				return 0;
-			}
-		}
-	}		
+	public boolean isWaitTerminated(){
+		return waitTerminated;
+	}
 }

@@ -1,4 +1,4 @@
-package select2.test;
+package select2.debug;
 
 import java.util.Date;
 
@@ -53,23 +53,17 @@ public class Flag2Test{
 		public void run(){
 			count = 0;
 			while (count < rounds){
-				// set and wait for waiter thread to wakeup
-				count += flag2.setAndSetterWait(count + 1);
+				flag2.set(true);
+				count++;
 			}
-			
-		    wait2.interrupt();
-			System.out.println("THREAD-" + Thread.currentThread().getId() + ":\tINTERRUPT: " + wait2.isInterrupted() + " STATE: " + wait2.getState() );
-			if (!wait2.isInterrupted()){
-				wait2.interrupt();
-				System.out.println("THREAD-" + Thread.currentThread().getId() + ":\tINTERRUPT: " + wait2.isInterrupted() + " STATE: " + wait2.getState() );
-			}
+		    flag2.terminateWait();
 		}
 	}
 
 	protected static class Wait2 extends Thread{
 		private final Flag2 flag2;
 		private int count;
-
+		
 		public Wait2(Flag2 flag2){
 			this.flag2 = flag2;
 		}
@@ -81,15 +75,13 @@ public class Flag2Test{
 		public void run(){
 			count = 0;
 			try{
-				while(!interrupted()){
-					// wait and wakeup setter thread
-					flag2.waiterWaitAndSetWakeup();
-					
+				while( !flag2.isWaitTerminated() ){
+					flag2.waitUntil(true);
+					flag2.set(false);
 					count++;
 				}
 			}
 			catch(Throwable ignored){}
 		}
-		
 	}
 }

@@ -18,6 +18,8 @@ package select2;
  *     flag.waitWhile(false); 
  *
  * and the thread goes to sleep while the flag is false.
+ *
+ * TODO: hide monitor, ie. instead of this synch on an internal protected object
  */
 public class Flag2{
 
