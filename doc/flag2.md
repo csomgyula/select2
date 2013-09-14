@@ -91,14 +91,14 @@ properties
 
     set(v) << wait_until(v) => wait_until immediately terminates 
 
-**Property 2: If the appropiate `set()` is invoked after wait then this wait terminates if:**
+**Property 2: If the appropiate `set()` is invoked at any time then this wait terminates if:**
 
 * **(i) no other wait is issued in parallel with or after this one**
-* **(ii) no other `set` is issued before `wait_until` terminates**
+* **(ii) no other `set` is issued after this one and before `wait_until` terminates**
 
 Formally:
 
-    wait_until(v) < set(v) => wait_until terminates 
+    set(v) => wait_until terminates 
 
 Proof:
 
