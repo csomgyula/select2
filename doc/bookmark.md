@@ -98,6 +98,7 @@ Memory consistency
 
 [Java Language Specification: 17.4. Memory Model](http://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4)
 
+[Jaroslav Sevcik and David Aspinal: On Validity of Program Transformations in the Java Memory Model](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.112.1790&rep=rep1&type=pdf)
 
 ### System ###
 
