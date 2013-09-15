@@ -16,7 +16,8 @@ Threads
 
 [The Java Tutorials: Concurrency](http://docs.oracle.com/javase/tutorial/essential/concurrency/)
 
-[Open JDK 7 source files](http://hg.openjdk.java.net/jdk7/jdk7/jdk/file/9b8c96f96a0f/src/share/classes/java/)
+[Open JDK 7 source files](http://hg.openjdk.java.net/jdk7/jdk7/jdk/file/9b8c96f96a0f/src/share/classes/java/)  
+Just in case it's necessary to dig deeper then the API docs...
 
 **Thread control**
 
@@ -125,9 +126,46 @@ Parallel programming
 
 **Performance**
 
-[Wikipedia: Amdahl's law](http://en.wikipedia.org/wiki/Amdahl%27s_law)
+[Wikipedia: Amdahl's law](http://en.wikipedia.org/wiki/Amdahl%27s_law)  
 
-[Future Chips: An example of “When Amdahl’s law is inapplicable?](http://www.futurechips.org/thoughts-for-researchers/appendix-amdahls-law-inapplicable.html)
+Notes:
+
+(1) According to the law the parallel improvement would be:
+
+                        1               1
+    T(1) / T(p) = ----------------- ~= ---
+                    B + 1/p (1-B)       B
+
+where 
+
+* `T(1)` is the time of sequential execution
+* `T(p)` is the time necessary when using `p` parallel processes
+* `B` is the fraction of the code that is not parallelizable, ie. critical sections or such (`0 <= B <= 1`)
+
+For instance if 10% of the code is not parallelizable, then Amdahl's law states, that at most cca. 10x improvement can be achieved even if using more then 10 processors.
+
+(2) The above law does not take several factors into consideration. For instance what happens if `B` is not constant instead it changes as `n` changes. Sample: 
+
+Assume that we have an input stream of numbers and we want to determine the MAX value. Assume also that the stream contains N numbers and the reading can be split into different threads. A parallel algoritm could be the following:
+
+1. Stage 1. Read the stream in p parallel streams and in each stream determine the MAX number. Let the sequential algoritm run at `T(1) = T(N, 1) = c * N`, where `c` is some constant determined by the speed of read and the processor. Then each process run in `T(1)/p = c * N / p` time.
+2. Stage 2. Determine the MAX number from the `p` MAX values produced by the  parallel streams. Again this is parallelized within the `p` processes in a B-Tree manner, which yields a `log p` time.
+
+Hence the total time for the algoritm when using p parallel processes:
+
+    T(1)/p + log p = c * N / p + log p
+
+The improvement is
+
+          c * N                p
+    -----------------  = --------------------- -> p, if p fixed, N -> infinitum
+    c * N / p + log p    1 + p * log p / c * N
+
+hence Amdal's law in its original form is not true. The reason is that the parallel portion is not constant, converges to zero as N increases:
+
+           log p
+    B = ----------- -> 0, if p fixed, N -> infinitum
+           c * N
 
 [Wikipedia: Gustafson's law](http://en.wikipedia.org/wiki/Gustafson%27s_law)
 
