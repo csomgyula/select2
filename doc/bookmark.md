@@ -1,13 +1,18 @@
 Bookmark
 ==
 
-**Low level multithreading APIs, concepts**
+**Low level multithreading APIs, concepts**:
 
+* thread concepts, Java and C APIs
+* memory consistency
+* some background theory on parallel computing
 
-Java
+Threads
 --
 
-**Core Java multithreading concepts and APIs**
+### Java ###
+
+*Core Java multithreading concepts and APIs*
 
 [The Java Tutorials: Concurrency](http://docs.oracle.com/javase/tutorial/essential/concurrency/)
 
@@ -30,29 +35,12 @@ Java
 [Javamex: Volatile](http://www.javamex.com/tutorials/synchronization_volatile_java_5.shtml)
 
 
-**Java Memory Model (JMM)**
+### System ###
 
-[Doug Lea: The JSR-133 Cookbook for Compiler Writers](http://gee.cs.oswego.edu/dl/jmm/cookbook.html) (-2011)
-
-[JSR 133 (Java Memory Model) FAQ](http://www.cs.umd.edu/~pugh/java/memoryModel/jsr-133-faq.html)
-
-[Brian Goetz: Java theory and practice: Fixing the Java Memory Model, Part 1](http://www.ibm.com/developerworks/java/library/j-jtp02244/index.html) | [Part2](http://www.ibm.com/developerworks/library/j-jtp03304/) (2004)
-
-[Java Language Specification: 17.4. Memory Model](http://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4)
+*Machine and OS level concepts and C APIs*
 
 
-System
---
-
-**Machine and OS level concepts and C APIs**
-
-[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_%28computing%29)
-
-[Wikipedia: CPU cache](http://en.wikipedia.org/wiki/CPU_cache) 
-
-[Intel Guide for Developing Multithreaded Applications](http://software.intel.com/en-us/articles/intel-guide-for-developing-multithreaded-applications/)
-
-### Linux/Unix ###
+**Linux scheduler**
 
 [M. Tim Jones: Inside the Linux scheduler](http://www.ibm.com/developerworks/library/l-scheduler/) (2006) | [Inside the Linux 2.6 Completely Fair Scheduler](http://www.ibm.com/developerworks/library/l-completely-fair-scheduler/) (2009)
 
@@ -75,20 +63,52 @@ System
 [Wei Dong Xie: Avoiding memory leaks in POSIX thread programming](http://www.ibm.com/developerworks/linux/library/l-memory-leaks/index.html) (2010)
 
 
-### OS X, iOS ###
+**OS X, iOS**
 
 [Concurrency Programming Guide](https://developer.apple.com/library/ios/DOCUMENTATION/General/Conceptual/ConcurrencyProgrammingGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40008091)
 
 
-### Windows ###
+**Windows**
 
 [MSDN: Processes and Threads](http://msdn.microsoft.com/en-us/library/windows/desktop/ms684841%28v=vs.85%29.aspx)
 
 [MSDN: Synhcronization](http://msdn.microsoft.com/en-us/library/ms686353%28v=vs.85%29.aspx)
 
+**Common**
 
-Theory
+[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_%28computing%29)
+
+[Intel Guide for Developing Multithreaded Applications](http://software.intel.com/en-us/articles/intel-guide-for-developing-multithreaded-applications/)
+
+
+Memory consistency
 --
+
+*Memory models and consistency with multiple processes*
+
+### Java Memory Model (JMM) ###
+
+[JSR 133 (Java Memory Model) FAQ](http://www.cs.umd.edu/~pugh/java/memoryModel/jsr-133-faq.html)
+
+[William Pugh: The Java Memory Model](http://www.cs.umd.edu/~pugh/java/memoryModel/)
+
+[Doug Lea: The JSR-133 Cookbook for Compiler Writers](http://gee.cs.oswego.edu/dl/jmm/cookbook.html) (- 2011)
+
+[Brian Goetz: Java theory and practice: Fixing the Java Memory Model, Part 1](http://www.ibm.com/developerworks/java/library/j-jtp02244/index.html) | [Part2](http://www.ibm.com/developerworks/library/j-jtp03304/) (2004)
+
+[Java Language Specification: 17.4. Memory Model](http://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4)
+
+
+### System ###
+
+[Wikipedia: CPU cache](http://en.wikipedia.org/wiki/CPU_cache) 
+
+[Relaxed-Memory Concurrency](http://www.cl.cam.ac.uk/~pes20/weakmemory/index.html)
+
+
+Parallel programming
+--
+
 
 [Wikipedia: Non-blocking algoritm](http://en.wikipedia.org/wiki/Non-blocking_algorithm)
 
@@ -100,7 +120,6 @@ Theory
 
 [Wikipedia: Gustafson's law](http://en.wikipedia.org/wiki/Gustafson%27s_law)
 
-**Modelling parallel processes**  
+**Modelling parallel processes**
 
 [Wikipedia: I/O automaton](http://en.wikipedia.org/wiki/I/O_automaton)
-
