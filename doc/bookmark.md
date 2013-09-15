@@ -128,6 +128,8 @@ Parallel programming
 
 [Wikipedia: Amdahl's law](http://en.wikipedia.org/wiki/Amdahl%27s_law)  
 
+> The speedup of a program using multiple processors in parallel computing is limited by the time needed for the sequential fraction of the program. For example, if a program needs 20 hours using a single processor core, and a particular portion of the program which takes one hour to execute cannot be parallelized, while the remaining 19 hours (95%) of execution time can be parallelized, then regardless of how many processors are devoted to a parallelized execution of this program, the minimum execution time cannot be less than that critical one hour. Hence the speedup is limited up to 20×.
+
 Notes:
 
 (1) According to the law the parallel improvement would be:
