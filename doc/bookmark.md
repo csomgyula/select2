@@ -42,7 +42,7 @@ Java
 System
 --
 
-[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_(computer_science))
+[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_(computer_science)
 
 [Wikipedia: CPU cache](http://en.wikipedia.org/wiki/CPU_cache) 
 
@@ -50,9 +50,7 @@ System
 
 ### Linux/Unix ###
 
-[M. Tim Jones: Inside the Linux scheduler](http://www.ibm.com/developerworks/library/l-scheduler/) (2006)
-
-[M. Tim Jones: Inside the Linux 2.6 Completely Fair Scheduler](http://www.ibm.com/developerworks/library/l-completely-fair-scheduler/) (2009)
+[M. Tim Jones: Inside the Linux scheduler](http://www.ibm.com/developerworks/library/l-scheduler/) (2006) | [Inside the Linux 2.6 Completely Fair Scheduler](http://www.ibm.com/developerworks/library/l-completely-fair-scheduler/) (2009)
 
 **POSIX threads**
 
