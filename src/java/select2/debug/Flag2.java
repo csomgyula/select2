@@ -31,6 +31,9 @@ public class Flag2{
 	// shows whether a wait is going on
 	private volatile boolean waiting;
 
+	private volatile long g_syncSets;
+	private volatile long g_syncWaits;
+	
 	/**
 	 *  get the value of the flag
 	 */
@@ -50,11 +53,12 @@ public class Flag2{
 		if ( waiting ){ 
 			if(until_value == v){
 
+				// unset the wait flag
+				waiting = false;
+
 				// wait is synchronized on this
 				synchronized(this){
-
-					// unset the wait flag
-					waiting = false;
+					g_syncSets++;
 					
 					// notify the thread that is waiting
 					this.notify();
@@ -84,6 +88,8 @@ public class Flag2{
 				while ( waiting ){ 
 					// wait is synchronized on this
 					synchronized(this){
+						g_syncWaits++;
+						
 					    if (waitTerminated){ waiting = false; throw new InterruptedException(); }
 						
 						// recheck the wait flag
@@ -133,4 +139,8 @@ public class Flag2{
 	public boolean isWaitTerminated(){
 		return waitTerminated;
 	}
+	
+	public long g_getSyncSets(){ return g_syncSets; }
+	public long g_getSyncWaits(){ return g_syncWaits; }
+	
 }

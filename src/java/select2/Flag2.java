@@ -51,11 +51,11 @@ public class Flag2{
 		// check whether there is a wait and whether the new value is the one waited for, if yes then notify the waiting thread
 		if ( waiting && until_value == v){
 
+			// unset the wait flag
+			waiting = false;
+				
 			// wait is synchronized on this
 			synchronized(this){
-
-				// unset the wait flag
-				waiting = false;
 				
 				// notify the thread that is waiting
 				this.notify();
