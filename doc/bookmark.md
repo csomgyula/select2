@@ -144,7 +144,7 @@ where
 
 For instance if 10% of the code is not parallelizable, then Amdahl's law states, that at most cca. 10x improvement can be achieved even if using more then 10 processors.
 
-(2) The above law does not take several factors into consideration. For instance what happens if `B` is not constant instead it changes as `n` changes. Sample: 
+(2) The above law does not take several factors into consideration. For instance what happens if `B` is not constant instead it changes as `p` changes. Sample: 
 
 Assume that we have an input stream of numbers and we want to determine the MAX value. Assume also that the stream contains N numbers and the reading can be split into different threads. A parallel algoritm could be the following:
 
