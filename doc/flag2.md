@@ -37,11 +37,11 @@ methods
      # check whether there is a wait and whether the new value is the one waited for, if yes, then notify the waiting thread
      if waiting and until_value == v:
 
+         # unset the wait flag
+         waiting = false;
+
          # wait is synchronized on this
          synchronized(this): 
-
-             # unset the wait flag
-			 waiting = false;
 
              # notify the thread that is waiting
              notify
@@ -109,15 +109,15 @@ It either means that the condition is true or the thread is blocked in the `sync
 
 *Case 2 - wait is issued but notify is not*
 
-`notify` is not issued due to either `waiting` was false or the thread blocked in the synchronized. The latter could not happen, hence `waiting` was false at the time the setter thread checked it. That is the other thread (the waiter) has not yet set the wait flag to true:
+(1) `notify` is not issued due to either `waiting` was false or the thread blocked in the synchronized. The latter could not happen, hence `waiting` was false at the time the setter thread checked it. That is the other thread (the waiter) has not yet set the wait flag to true:
 
     if waiting <= waiting = true
 
-since the value was already set before the wait flag is checked:
+(2) Since the setter thread already set the value before it checked the wait flag:
 
     value = until_value << if waiting
 
-and wait flag is set before the condition is rechecked:
+and the waiter thread sets the wait flag before it rechecks the condition:
 
     waiting = true << if not (value = until_value)
 
@@ -143,29 +143,33 @@ Hence it terminates due to the notification...
 
     notify < wait
 
-Again due to the `synchronized` block this means that notify finished earlier:
+(1) Again due to the `synchronized` block this means that notify finished earlier:
 
     notify << wait
 
-Since `wait` runs in a `synchronized` block with another stament which rechecks whether the wait flag is true, the above means that `notify` happened before the waiter rechecked the flag:
+(2) Since `wait` runs in a `synchronized` block with another stament which rechecks whether the wait flag is true, the above means that `notify` happened before the waiter rechecked the flag:
 
     notify << if waiting: wait
 
-Also before `notify` is issued that thread unset the wait flag, that is:
+(3) Also before `notify` is issued that thread unset the wait flag, that is:
 
     waiting = false << notify
 
-Since `wait` is only executed if the wait flag is true, this means that the waiter thread modified the wait flag between the above two statements:
+(4) Since `wait` is only executed if the wait flag is true, this means that the waiter thread modified the wait flag between the above two statements:
 
-    waiting = false < waiting = true << if waiting: wait
+    waiting = false <= waiting = true << if waiting: wait
 
-Hence the waiter thread rechecked the condition later then the value was set, since
+(5) Hence the waiter thread rechecked the condition later then the value was set,:
+
+    value = v << if not(value = v)
+
+since the setter thread sets the value before the wait flag:
 
     value = v << waiting = false
 
-and
+and the waiter thread rechecks the condition after it set the wait flag:
 
-    if not(value = v) << waiting = true
+    waiting = true << if not(value = v)
 
 This is a contradiction since the thread only goes to sleep if the recheck is true.
 
