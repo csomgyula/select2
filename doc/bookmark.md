@@ -1,11 +1,13 @@
 Bookmark
 ==
 
-Low level multithreading APIs, articles and theory
+**Low level multithreading APIs, concepts**
 
 
 Java
 --
+
+**Core Java multithreading concepts and APIs**
 
 [The Java Tutorials: Concurrency](http://docs.oracle.com/javase/tutorial/essential/concurrency/)
 
@@ -42,7 +44,9 @@ Java
 System
 --
 
-[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_(computer_science)
+**Machine and OS level concepts and C APIs**
+
+[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_(computer_science))
 
 [Wikipedia: CPU cache](http://en.wikipedia.org/wiki/CPU_cache) 
 
