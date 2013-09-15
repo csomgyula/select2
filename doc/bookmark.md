@@ -46,7 +46,7 @@ System
 
 **Machine and OS level concepts and C APIs**
 
-[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_(computer_science))
+[Wikipedia: Thread](http://en.wikipedia.org/wiki/Thread_%28computing%29)
 
 [Wikipedia: CPU cache](http://en.wikipedia.org/wiki/CPU_cache) 
 
