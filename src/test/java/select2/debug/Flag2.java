@@ -143,4 +143,46 @@ public class Flag2{
 	public long g_getSyncSets(){ return g_syncSets; }
 	public long g_getSyncWaits(){ return g_syncWaits; }
 	
+	
+	private volatile T_WaitState t_waitState;
+	public void t_Wait(){
+		// wait
+		synchronized(this){
+			t_waitState = T_WaitState.WAIT;
+            try {
+                waitWhile(false);
+            } catch (InterruptedException ignored) { }
+        }
+		
+		// wakeup setter thread if necessary
+	}
+
+	private volatile Object t_setMonitor = new Object();
+	private volatile T_SetState t_setState;
+	public void t_Set(){
+		// set to true
+		t_setState = T_SetState.NOT_WAIT;
+		set(true);
+		
+		// wait for waiter thread to wake up if necessary
+		synchronized(t_setMonitor){
+			synchronized(this){
+				if (t_waitState == T_WaitState.WAIT){ t_setState = T_SetState.WAIT; }
+			}
+			
+			if (t_setState == T_SetState.WAIT){
+                try {
+                    t_setMonitor.wait();
+                } catch (InterruptedException ignored) { }
+            }
+		}
+	}
+
+    protected enum T_WaitState{
+        WAIT;
+    }
+
+    protected enum T_SetState{
+        WAIT, NOT_WAIT;
+    }
 }
