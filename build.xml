@@ -1,9 +1,9 @@
 <project default="dist">
 	<!-- common -->
-	<property name="src" location="src"/>
 	<property name="doc" location="doc"/>
-	<property name="build" location="build"/>
 	<property name="dist"  location="dist"/>
+    <property name="src" location="src"/>
+    <property name="build" location="build"/>
    
 	<target name="clean-dist" depends="clean, dist"/>
    
@@ -47,7 +47,7 @@
          Locale="hu_HU"
          charset="UTF-8">
          
-         <packageset dir="${src}/java" defaultexcludes="yes">
+         <packageset dir="select2-java/${src}/main/java" defaultexcludes="yes">
             <include name="**"/>
          </packageset>   
       
@@ -63,8 +63,8 @@
 	</target>
 
 	<target name="java-build" description="compile Java source">
-		<mkdir dir="${build}"/>		
-		<javac srcdir="${src}/java" destdir="${build}" encoding="UTF-8"/>
+		<mkdir dir="select2-java/${build}"/>
+		<javac srcdir="select2-java/${src}/main/java" destdir="select2-java/${build}" encoding="UTF-8"/>
 	</target>
 
 	<!-- scala -->
