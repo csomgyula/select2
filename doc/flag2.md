@@ -40,7 +40,7 @@ methods
          # unset the wait flag
          waiting = false;
 
-         # wait is synchronized on this
+         # notification is synchronized on this
          synchronized(this): 
 
              # notify the thread that is waiting

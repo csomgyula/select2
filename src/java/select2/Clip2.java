@@ -124,6 +124,12 @@ public class Clip2{
 			threads[i].setClip2(clip2);
 			threads[i].start();
 		}
+
+        for (int i = 0; i<2 ;i++){
+            try {
+                threads[i].join();
+            } catch (InterruptedException ignored) { }
+        }
 	}
 	
 	/**

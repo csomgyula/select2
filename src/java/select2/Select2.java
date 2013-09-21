@@ -1,5 +1,7 @@
 package select2;
 
+import java.util.Observable;
+
 /**
  * select2 protocol implementation, building upon the Java-builtin synchronization primitive: volatile.
  */
@@ -9,9 +11,14 @@ public class Select2{
 	*/
 	private final long[] threadIds;
 	
-	private volatile boolean[] active, selected, wait;
+	private volatile boolean active0, active1, selected0, selected1;
+    private volatile boolean wait0, wait1; // TODO: guess no need for these, condWait might be enough?
 	private volatile int token;
-	
+
+    // conditional wait
+    private final Object condMonitor;
+    private volatile boolean condWait;
+
 	/**
 	 * The current implementation does not deal with open systems: one must explicitely give the threads to choose between.
 	 */
@@ -20,9 +27,8 @@ public class Select2{
 		for (int i = 0; i<2;i++){
 			threadIds[i] = threads[i].getId();
 		}
-		active = new boolean[2];
-		selected = new boolean[2];
-		wait = new boolean[2];
+
+        condMonitor = new Object();
 	}
 		
 
@@ -38,59 +44,266 @@ public class Select2{
 		int i =  getInternalThreadId();
 		
 		// 1. mark myself as active
-		active[i] = true;
+        activate(i);
 		
 		// 2. check whether I am the token owner
 		boolean token_owner = token == i;
 	
 		// 3. check whether the other thread already entered the selection protocol
-		if (active[(i + 1) % 2]){
-			// 3.1. if I am not the token owner then wakeup owner, cleanup and exit 
-			if (!token_owner){
-				wait[(i+1) % 2] = false;
-				active[i] = false;
-				return false;
-			}
-			// 3.2. if I am the token owner wait for the other thread till it decides what to do 
-			else{
-				wait[i] = true;
-				while ( token == i && active[(i + 1) % 2] && wait[i]){
-					Thread.yield();
-				}
-				wait[i] = false;
-			}
-		}
-		
+        if ( isActive(i + 1) ){
+            // 3.1. if I am not the token owner then wakeup owner, cleanup and exit
+            if (!token_owner){
+                nowait(i + 1);
+                deactivate(i);
+                return false;
+            }
+            // 3.2. if I am the token owner wait for the other thread till it decides what to do
+            else{
+                wait(i);
+
+//                while ( token == i && isActive(i + 1) && isWait(i) ){
+//                    Thread.yield();
+//                }
+                waitWhile(i);
+
+                nowait(i);
+            }
+        }
+
 		// 4. now different cases could happen:
 		if (token_owner){
 			// 4.1. if I was the token owner but the other thread took the ownership so far, then I am not selected, cleanup and exit
 			if (token != i){
-				active[i] = false;
+				deactivate(i);
 				return false;
 			}
 			// 4.2. if I was and still is the token owner, then I am selected, give up the token ownership, cleanup and exit
 			else{
-				selected[i] = true;
-				assert !selected[(i+1) % 2];
+				select(i);
+				assert !isSelected(i+1);
 				boolean result = closure.execute();
-				selected[i] = false;
-				token = (i + 1) % 2;
-				active[i] = false;
+				deselect(i);
+				releaseToken(i);
+                deactivate(i);
 				return result; 
 			} 
 		}
 		// 4.3. if I was not the token owner but reached this point, than I am selected, get the token ownership, cleanup and exit
 		else {
-			token = i;
-			selected[i] = true;
-			assert !selected[(i+1) % 2];
+			acquireToken(i);
+			select(i);
+            assert !isSelected(i+1);
 			boolean result = closure.execute();
-			selected[i] = false;
-			active[i] = false;
+			deselect(i);
+            deactivate(i);
 			return result;
 		}
 	}
-	
+
+    // token
+
+    /**
+     * Get the token ownership
+     *
+     * @param i the index of thread who acquires
+     */
+    protected void acquireToken(int i){
+        token = i;
+
+        // may wake up the other thread
+        mayNotify( (i+1) % 2 );
+    }
+
+    /**
+     * Release the token ownership
+     *
+     * @param i the index of thread who releases
+     */
+    protected void releaseToken(int i){
+        token = (i+1) % 2;
+    }
+
+    // active state
+
+    /**
+     * mark thread i as active
+     */
+    protected void activate(int i){
+        setActive(i, true);
+    }
+
+    /**
+     * mark thread i as inactive
+     */
+    protected void deactivate(int i){
+        setActive(i, false);
+
+        // may wake up the other thread
+        mayNotify( (i + 1) % 2);
+    }
+
+    /**
+     * set the active flag of thread i
+     */
+    protected void setActive(int i, boolean value){
+        switch (i % 2){
+            case 0: active0 = value; break;
+            case 1: active1 = value; break;
+        }
+    }
+
+    /**
+     * get the active flag of thread i
+     */
+    protected boolean isActive(int i){
+        if ((i % 2) == 0){ return active0; }
+        else{ return active1; }
+    }
+
+
+    // select state
+
+    /**
+     * mark thread i as selected
+     */
+    protected void select(int i){
+        setSelected(i, true);
+    }
+
+    /**
+     * mark thread i as unselected
+     */
+    protected void deselect(int i){
+        setSelected(i, false);
+    }
+
+    /**
+     * set the selected flag of thread i
+     */
+    protected void setSelected(int i, boolean value){
+        switch (i % 2){
+            case 0: selected0 = value; break;
+            case 1: selected1 = value; break;
+        }
+    }
+
+    /**
+     * get the selected flag of thread i
+     */
+    protected boolean isSelected(int i){
+        if ((i % 2) == 0){ return selected0; }
+        else{ return selected1; }
+    }
+
+
+    // wait state
+
+    /**
+     * mark thread i as waiting
+     */
+    protected void wait(int i){
+        setWait(i, true);
+    }
+
+    /**
+     * mark thread i as not waiting
+     */
+    protected void nowait(int i){
+        setWait(i, false);
+
+        // may wake up the thread
+        mayNotify(i);
+    }
+
+    /**
+     * set the wait flag of thread i
+     */
+    protected void setWait(int i, boolean value){
+        switch (i % 2){
+            case 0: wait0 = value; break;
+            case 1: wait1 = value; break;
+        }
+    }
+
+    /**
+     * get the wait flag of thread i
+     */
+    protected boolean isWait(int i){
+        if ((i % 2) == 0){ return wait0; }
+        else{ return wait1; }
+    }
+
+    // conditions
+
+    /**
+     * The conditional wait for thread i
+     *
+     * @param i index of the thread wants to wait
+     */
+    protected void waitWhile(int i){
+        // wait only if the condition is true
+         if ( isCond(i) ){
+
+             // mark waiting
+             condWait = true;
+
+             // recheck the condition
+             if ( isCond(i) ){
+
+                // wait while condition is true
+                while ( isCond(i) ){
+
+                    // wait is synchronized on the monitor
+                    synchronized (condMonitor){
+
+                        // recheck the condition
+                        if ( isCond(i) ){
+
+                            // wait on the monitor
+                            try {
+                                condMonitor.wait();
+                            } catch (InterruptedException ignored) { } // TODO: handle interrupt
+                        }
+                    }
+                }
+             }
+             // condition so far became false
+             else{
+
+                 // not waiting
+                 condWait = false;
+             }
+
+         }
+    }
+
+    /**
+     * Notify if there's a wait and the condition became false.
+     * Must be called after a relevant flag is already changed.
+     *
+     * @param i index of the thread to notify
+     */
+    protected void mayNotify(int i){
+       // notify only if there's a wait and the condition became false
+       if ( condWait && isCond(i) ){
+
+           // mark no wait
+           condWait = false;
+
+           // notification is synchronized
+           synchronized (condMonitor){
+
+               // notify
+               condMonitor.notify();
+           }
+       }
+    }
+
+    protected boolean isCond(int i){
+       i = i % 2;
+       return token == i && isActive(i + 1) && isWait(i);
+    }
+
 
 	/**
 	 * Get the internal thread id used in the protocol: 0 or 1.
@@ -100,4 +313,5 @@ public class Select2{
 		else{ return 1; }
 	}
 
+    protected volatile int g_waits;
 }
