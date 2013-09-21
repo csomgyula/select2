@@ -1,18 +1,15 @@
 package select2;
 
-import java.util.Observable;
-
 /**
- * select2 protocol implementation, building upon the Java-builtin synchronization primitive: volatile.
+ * Implementation of select2 protocol
  */
-public class Select2{
+public class Select2 {
 	/**
 	* Holds the thread ids using the synch service.
 	*/
 	private final long[] threadIds;
-	
+
 	private volatile boolean active0, active1, selected0, selected1;
-    private volatile boolean wait0, wait1; // TODO: guess no need for these, condWait might be enough?
 	private volatile int token;
 
     // conditional wait
@@ -30,15 +27,11 @@ public class Select2{
 
         condMonitor = new Object();
 	}
-		
 
-	/**
-	 * Select 2 application service that
-	 * (1) selects the current thread or not,
-	 * (2) if it is selected then it should execute the given closure, otherwise not.
-	 * Returns true if the closure was executed and its execution was successful, otherwise false. That is to say: false 
-	 * can mean either that the closure was not selected to run or it was executed but failed (returned false). 
-	 */	
+
+    /**
+     * select2 service
+     */
 	public boolean execute(Closure closure){
 		// get the internal thread number
 		int i =  getInternalThreadId();
@@ -59,14 +52,11 @@ public class Select2{
             }
             // 3.2. if I am the token owner wait for the other thread till it decides what to do
             else{
-                wait(i);
 
-//                while ( token == i && isActive(i + 1) && isWait(i) ){
+//                while ( token == i && isActive(i + 1) && condWait ){
 //                    Thread.yield();
 //                }
                 waitWhile(i);
-
-                nowait(i);
             }
         }
 
@@ -81,11 +71,11 @@ public class Select2{
 			else{
 				select(i);
 				assert !isSelected(i+1);
-				boolean result = closure.execute();
+                boolean result = closure.execute();
 				deselect(i);
 				releaseToken(i);
                 deactivate(i);
-				return result; 
+				return result;
 			} 
 		}
 		// 4.3. if I was not the token owner but reached this point, than I am selected, get the token ownership, cleanup and exit
@@ -93,7 +83,7 @@ public class Select2{
 			acquireToken(i);
 			select(i);
             assert !isSelected(i+1);
-			boolean result = closure.execute();
+            boolean result = closure.execute();
 			deselect(i);
             deactivate(i);
 			return result;
@@ -196,43 +186,6 @@ public class Select2{
     }
 
 
-    // wait state
-
-    /**
-     * mark thread i as waiting
-     */
-    protected void wait(int i){
-        setWait(i, true);
-    }
-
-    /**
-     * mark thread i as not waiting
-     */
-    protected void nowait(int i){
-        setWait(i, false);
-
-        // may wake up the thread
-        mayNotify(i);
-    }
-
-    /**
-     * set the wait flag of thread i
-     */
-    protected void setWait(int i, boolean value){
-        switch (i % 2){
-            case 0: wait0 = value; break;
-            case 1: wait1 = value; break;
-        }
-    }
-
-    /**
-     * get the wait flag of thread i
-     */
-    protected boolean isWait(int i){
-        if ((i % 2) == 0){ return wait0; }
-        else{ return wait1; }
-    }
-
     // conditions
 
     /**
@@ -278,6 +231,18 @@ public class Select2{
     }
 
     /**
+     * mark thread i as not waiting
+     */
+    protected void nowait(int i){
+        i = i % 2;
+
+        condWait = false;
+
+        // may wake up the thread
+        mayNotify(i);
+    }
+
+    /**
      * Notify if there's a wait and the condition became false.
      * Must be called after a relevant flag is already changed.
      *
@@ -285,7 +250,7 @@ public class Select2{
      */
     protected void mayNotify(int i){
        // notify only if there's a wait and the condition became false
-       if ( condWait && isCond(i) ){
+       if ( condWait && !isCond(i) ){
 
            // mark no wait
            condWait = false;
@@ -301,7 +266,7 @@ public class Select2{
 
     protected boolean isCond(int i){
        i = i % 2;
-       return token == i && isActive(i + 1) && isWait(i);
+       return token == i && isActive(i + 1) && condWait;
     }
 
 
@@ -312,6 +277,4 @@ public class Select2{
 		if (threadIds[0] == Thread.currentThread().getId()){ return 0; }
 		else{ return 1; }
 	}
-
-    protected volatile int g_waits;
 }
