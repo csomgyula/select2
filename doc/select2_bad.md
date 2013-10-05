@@ -12,8 +12,8 @@ The following protocol is a bad one, it tries to implement a wait free protocol 
 states
 ---
 
-* `active0`, `active1`
-* `token`
+* `active0`, `active1` - shows whether the appropiate thread is active or not
+* `token` - in each round either thread owns a token which means it is the preferred thread 
 * `nto_selected`, `nto_interrupted` - handles the appropiate flag for the thread which is not the token owner
 
 pseudo code
@@ -135,7 +135,11 @@ which evaluates to to true since the select flag is not yet set, hence thread 0 
 
     thread 1: nto_selected = not nto_interrupted part 2: set nto_selected
 
-which sets the selected flag to true since the previous read of the interrupt flag yielded false
+which sets the selected flag to true since the previous read of the interrupt flag yielded false, hence
+
+    thread 1: if nto_selected
+
+evaluates to true and thread 1 becomes selectable as well.
 
 conclusion
 ---
